@@ -1,0 +1,77 @@
+@model AccountingSystem.Web.Models.IncomeStatementViewModel
+@{
+    ViewBag.Title = "Income Statement";
+}
+<h2>Income Statement</h2>
+
+<form method="get" class="row g-3 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label" for="fromDate">From</label>
+        <input id="fromDate" name="fromDate" type="date" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="toDate">To</label>
+        <input id="toDate" name="toDate" type="date" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Run</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    </div>
+</form>
+
+<div class="row">
+    <div class="col-lg-7">
+        <table class="table table-sm table-striped">
+            <thead><tr><th>Code</th><th>Account</th><th>Section</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                @foreach (var line in Model.Lines)
+                {
+                    <tr>
+                        <td>@line.AccountCode</td>
+                        <td>@line.AccountName</td>
+                        <td>@line.SectionName</td>
+                        <td class="text-end">@line.Amount.ToString("N4")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold"><td colspan="3" class="text-end">Total revenue</td><td class="text-end">@Model.Summary.TotalRevenue.ToString("N4")</td></tr>
+                <tr class="fw-bold"><td colspan="3" class="text-end">Total expense</td><td class="text-end">@Model.Summary.TotalExpense.ToString("N4")</td></tr>
+                <tr class="table-secondary fw-bold"><td colspan="3" class="text-end">Net income</td><td class="text-end">@Model.Summary.NetIncome.ToString("N4")</td></tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="col-lg-5">
+        <canvas id="plChart" height="220"></canvas>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        // Chart.js bar chart of revenue vs expense.
+        (function () {
+            var ctx = document.getElementById('plChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Revenue', 'Expense', 'Net income'],
+                    datasets: [{
+                        label: 'Amount',
+                        data: [
+                            @Model.Summary.TotalRevenue,
+                            @Model.Summary.TotalExpense,
+                            @Model.Summary.NetIncome
+                        ],
+                        backgroundColor: ['#198754', '#dc3545', '#0d6efd']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        })();
+    </script>
+}

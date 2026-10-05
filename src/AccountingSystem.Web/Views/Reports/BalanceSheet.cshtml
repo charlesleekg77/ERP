@@ -1,0 +1,88 @@
+@model AccountingSystem.Web.Models.BalanceSheetViewModel
+@{
+    ViewBag.Title = "Balance Sheet";
+}
+<h2>Balance Sheet</h2>
+
+<form method="get" class="row g-3 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label" for="asOfDate">As of</label>
+        <input id="asOfDate" name="asOfDate" type="date" class="form-control" value="@Model.AsOfDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Run</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    </div>
+</form>
+
+@if (Model.IsEquationBalanced)
+{
+    <div class="alert alert-success">Assets = Liabilities + Equity. The accounting equation holds.</div>
+}
+else
+{
+    <div class="alert alert-warning">
+        The accounting equation does not hold as of this date. This usually means a
+        prior-period close has not been posted; review the ledger.
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        <table class="table table-sm table-striped">
+            <thead><tr><th>Code</th><th>Account</th><th>Section</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+                @foreach (var line in Model.Lines)
+                {
+                    <tr>
+                        <td>@line.AccountCode</td>
+                        <td>@line.AccountName</td>
+                        <td>@line.SectionName</td>
+                        <td class="text-end">@line.Amount.ToString("N4")</td>
+                    </tr>
+                }
+                @if (Model.CurrentEarnings != 0)
+                {
+                    <tr>
+                        <td></td>
+                        <td>Current period earnings</td>
+                        <td>Equity</td>
+                        <td class="text-end">@Model.CurrentEarnings.ToString("N4")</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold"><td colspan="3" class="text-end">Total assets</td><td class="text-end">@Model.TotalAssets.ToString("N4")</td></tr>
+                <tr class="fw-bold"><td colspan="3" class="text-end">Total liabilities</td><td class="text-end">@Model.TotalLiabilities.ToString("N4")</td></tr>
+                <tr class="fw-bold"><td colspan="3" class="text-end">Total equity</td><td class="text-end">@Model.TotalEquity.ToString("N4")</td></tr>
+                <tr class="table-secondary fw-bold">
+                    <td colspan="3" class="text-end">Liabilities + equity</td>
+                    <td class="text-end">@((Model.TotalLiabilities + Model.TotalEquity).ToString("N4"))</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="col-lg-5">
+        <canvas id="bsChart" height="220"></canvas>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        (function () {
+            var ctx = document.getElementById('bsChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Assets', 'Liabilities', 'Equity'],
+                    datasets: [{
+                        data: [@Model.TotalAssets, @Model.TotalLiabilities, @Model.TotalEquity],
+                        backgroundColor: ['#0d6efd', '#dc3545', '#198754']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        })();
+    </script>
+}

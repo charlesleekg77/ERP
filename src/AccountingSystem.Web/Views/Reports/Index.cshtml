@@ -1,0 +1,34 @@
+@{
+    ViewBag.Title = "Reports";
+}
+<h2>Financial Reports</h2>
+<div class="row g-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Trial Balance</h5>
+            <p class="card-text small">Debit and credit totals per account with a proof line.</p>
+            <a class="btn btn-primary btn-sm" href="@Url.Action("TrialBalance")">Open</a>
+        </div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Income Statement</h5>
+            <p class="card-text small">Revenue and expenses for a period, with net income.</p>
+            <a class="btn btn-primary btn-sm" href="@Url.Action("IncomeStatement")">Open</a>
+        </div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">Balance Sheet</h5>
+            <p class="card-text small">Assets, liabilities and equity as of a date.</p>
+            <a class="btn btn-primary btn-sm" href="@Url.Action("BalanceSheet")">Open</a>
+        </div></div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100"><div class="card-body">
+            <h5 class="card-title">General Ledger</h5>
+            <p class="card-text small">Account movements with a running balance.</p>
+            <a class="btn btn-primary btn-sm" href="@Url.Action("GeneralLedger")">Open</a>
+        </div></div>
+    </div>
+</div>

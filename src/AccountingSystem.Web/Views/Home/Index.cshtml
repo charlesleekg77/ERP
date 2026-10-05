@@ -1,0 +1,42 @@
+@{
+    ViewBag.Title = "Home";
+}
+
+<div class="p-5 mb-4 bg-light rounded-3">
+    <h1 class="display-6">Accounting System</h1>
+    <p class="lead">
+        Double-entry general ledger, accounts receivable and accounts payable for
+        @System.Configuration.ConfigurationManager.AppSettings["Accounting:CompanyName"].
+    </p>
+    <p>Base currency: <strong>@System.Configuration.ConfigurationManager.AppSettings["Accounting:BaseCurrency"]</strong></p>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Journal Entries</h5>
+                <p class="card-text">Create, approve and post balanced journal vouchers.</p>
+                <a class="btn btn-primary" href="@Url.Action("Index", "Journal")">Open journal</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Financial Reports</h5>
+                <p class="card-text">Trial balance, income statement, balance sheet and ledger detail.</p>
+                <a class="btn btn-primary" href="@Url.Action("Index", "Reports")">Open reports</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Create an entry</h5>
+                <p class="card-text">Start a new journal voucher with dynamic debit/credit lines.</p>
+                <a class="btn btn-success" href="@Url.Action("Create", "Journal")">New journal entry</a>
+            </div>
+        </div>
+    </div>
+</div>

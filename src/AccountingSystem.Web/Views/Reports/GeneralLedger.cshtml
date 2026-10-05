@@ -1,0 +1,94 @@
+@using System.Linq
+@model AccountingSystem.Web.Models.GeneralLedgerViewModel
+@{
+    ViewBag.Title = "General Ledger";
+}
+<h2>General Ledger Detail</h2>
+<p class="text-muted">Account: <strong>@Model.AccountLabel</strong></p>
+
+<form method="get" class="row g-3 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label" for="accountId">Account</label>
+        <select id="accountId" name="accountId" class="form-select">
+            <option value="">All accounts</option>
+            @foreach (var opening in Model.OpeningBalances)
+            {
+                var selected = Model.AccountId == opening.AccountId;
+                <option value="@opening.AccountId" @(selected ? "selected" : "")>
+                    @opening.AccountCode - @opening.AccountName
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="fromDate">From</label>
+        <input id="fromDate" name="fromDate" type="date" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="toDate">To</label>
+        <input id="toDate" name="toDate" type="date" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Run</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    </div>
+</form>
+
+@if (Model.OpeningBalances.Any())
+{
+    <table class="table table-sm">
+        <thead><tr><th>Account</th><th class="text-end">Opening balance</th></tr></thead>
+        <tbody>
+            @foreach (var opening in Model.OpeningBalances)
+            {
+                <tr>
+                    <td>@opening.AccountCode - @opening.AccountName</td>
+                    <td class="text-end">@opening.OpeningBalance.ToString("N4")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<table id="glTable" class="table table-sm table-striped" style="width:100%">
+    <thead>
+        <tr>
+            <th>Account</th>
+            <th>Date</th>
+            <th>Voucher</th>
+            <th>Reference</th>
+            <th>Description</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+            <th class="text-end">Running balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Model.Movements)
+        {
+            <tr>
+                <td>@row.AccountCode</td>
+                <td>@row.TransactionDate.ToString("yyyy-MM-dd")</td>
+                <td>@row.VoucherNumber</td>
+                <td>@row.Reference</td>
+                <td>@row.Description</td>
+                <td class="text-end">@(row.Debit != 0 ? row.Debit.ToString("N4") : "")</td>
+                <td class="text-end">@(row.Credit != 0 ? row.Credit.ToString("N4") : "")</td>
+                <td class="text-end">@row.RunningBalance.ToString("N4")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section scripts {
+    <script>
+        $(function () {
+            $('#glTable').DataTable({
+                paging: false,
+                searching: true,
+                info: false,
+                order: []
+            });
+        });
+    </script>
+}
