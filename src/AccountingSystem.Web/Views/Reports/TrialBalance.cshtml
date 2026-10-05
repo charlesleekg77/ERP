@@ -1,0 +1,65 @@
+@model AccountingSystem.Web.Models.TrialBalanceViewModel
+@{
+    ViewBag.Title = "Trial Balance";
+}
+<h2>Trial Balance</h2>
+
+<form method="get" class="row g-3 align-items-end mb-3">
+    <div class="col-auto">
+        <label class="form-label" for="fromDate">From</label>
+        <input id="fromDate" name="fromDate" type="date" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="toDate">To</label>
+        <input id="toDate" name="toDate" type="date" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Run</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    </div>
+</form>
+
+@if (Model.IsBalanced)
+{
+    <div class="alert alert-success">The trial balance is in balance.</div>
+}
+else
+{
+    <div class="alert alert-danger">
+        The trial balance does not balance. Debits @Model.TotalDebits.ToString("N4") vs credits @Model.TotalCredits.ToString("N4").
+    </div>
+}
+
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Account</th>
+            <th>Type</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+            <th class="text-end">Net</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Model.Rows)
+        {
+            <tr>
+                <td>@row.AccountCode</td>
+                <td>@row.AccountName</td>
+                <td>@row.AccountTypeName</td>
+                <td class="text-end">@row.TotalDebit.ToString("N4")</td>
+                <td class="text-end">@row.TotalCredit.ToString("N4")</td>
+                <td class="text-end">@row.NetBalance.ToString("N4")</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr class="table-secondary fw-bold">
+            <td colspan="3" class="text-end">Control totals</td>
+            <td class="text-end">@Model.TotalDebits.ToString("N4")</td>
+            <td class="text-end">@Model.TotalCredits.ToString("N4")</td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>

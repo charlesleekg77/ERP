@@ -1,0 +1,57 @@
+@{
+    ViewBag.Title = "Journal Entries";
+}
+
+@* Emitted once for the AJAX approve/post/void calls on this page. *@
+@Html.AntiForgeryToken()
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Journal Entries</h2>
+    <a class="btn btn-success" href="@Url.Action("Create")">New Journal Entry</a>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <label class="form-label" for="statusFilter">Status</label>
+        <select id="statusFilter" class="form-select">
+            <option value="">All</option>
+            <option value="0">Draft</option>
+            <option value="1">Approved</option>
+            <option value="2">Posted</option>
+            <option value="3">Void</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label" for="searchFilter">Search</label>
+        <input id="searchFilter" class="form-control" placeholder="Voucher, reference or description" />
+    </div>
+</div>
+
+<table id="journalTable" class="table table-striped table-hover" style="width:100%">
+    <thead>
+        <tr>
+            <th>Voucher</th>
+            <th>Date</th>
+            <th>Reference</th>
+            <th>Status</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+            <th>Posted By</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+</table>
+
+@section scripts {
+    <script>
+        // Expose the action URLs so the external script stays free of Razor.
+        window.journalConfig = {
+            listUrl: '@Url.Action("List")',
+            detailsUrl: '@Url.Action("Details")',
+            approveUrl: '@Url.Action("Approve")',
+            postUrl: '@Url.Action("Post")',
+            voidUrl: '@Url.Action("Void")'
+        };
+    </script>
+    <script src="@Url.Content("~/Scripts/journal-entry.js")"></script>
+}

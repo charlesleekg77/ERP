@@ -1,0 +1,64 @@
+@using System.Linq
+@model AccountingSystem.Domain.Entities.JournalHeader
+@{
+    ViewBag.Title = "Journal " + Model.VoucherNumber;
+}
+<h2>Journal Entry @Model.VoucherNumber</h2>
+
+<dl class="row">
+    <dt class="col-sm-3">Status</dt>
+    <dd class="col-sm-9">
+        <span class="badge bg-secondary">@Model.Status</span>
+    </dd>
+    <dt class="col-sm-3">Transaction date</dt>
+    <dd class="col-sm-9">@Model.TransactionDate.ToString("yyyy-MM-dd")</dd>
+    <dt class="col-sm-3">Reference</dt>
+    <dd class="col-sm-9">@Model.Reference</dd>
+    <dt class="col-sm-3">Description</dt>
+    <dd class="col-sm-9">@Model.Description</dd>
+    <dt class="col-sm-3">Created by</dt>
+    <dd class="col-sm-9">@Model.CreatedBy at @Model.CreatedAt.ToString("u")</dd>
+    @if (Model.PostedAt.HasValue)
+    {
+        <dt class="col-sm-3">Posted by</dt>
+        <dd class="col-sm-9">@Model.PostedBy at @Model.PostedAt.Value.ToString("u")</dd>
+    }
+    @if (Model.VoidedAt.HasValue)
+    {
+        <dt class="col-sm-3">Voided by</dt>
+        <dd class="col-sm-9">@Model.VoidedBy at @Model.VoidedAt.Value.ToString("u") &mdash; @Model.VoidReason</dd>
+    }
+</dl>
+
+<table class="table table-sm table-striped">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Account</th>
+            <th>Description</th>
+            <th class="text-end">Debit</th>
+            <th class="text-end">Credit</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var line in Model.Lines.OrderBy(l => l.LineNumber))
+        {
+            <tr>
+                <td>@line.LineNumber</td>
+                <td>@(line.Account != null ? line.Account.AccountCode + " - " + line.Account.AccountName : line.AccountId.ToString())</td>
+                <td>@line.Description</td>
+                <td class="text-end">@(line.Debit != 0 ? line.Debit.ToString("N4") : "")</td>
+                <td class="text-end">@(line.Credit != 0 ? line.Credit.ToString("N4") : "")</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr class="table-secondary fw-bold">
+            <td colspan="3" class="text-end">Totals</td>
+            <td class="text-end">@Model.TotalDebit.ToString("N4")</td>
+            <td class="text-end">@Model.TotalCredit.ToString("N4")</td>
+        </tr>
+    </tfoot>
+</table>
+
+<a class="btn btn-outline-secondary" href="@Url.Action("Index")">Back to list</a>

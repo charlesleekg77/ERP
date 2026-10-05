@@ -1,0 +1,44 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Pp]ackages/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Publish output
+publish/
+*.Publish.xml
+*.pubxml
+*.pubxml.user
+
+# NuGet
+*.nupkg
+project.lock.json
+project.assets.json
+
+# Test / coverage
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+# Logs and traces
+*.log
+logs/
+
+# Local database / secrets - never commit
+*.bak
+*.mdf
+*.ldf
+Web.Secrets.config
+secrets.config
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~

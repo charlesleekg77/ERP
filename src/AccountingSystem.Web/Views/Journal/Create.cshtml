@@ -1,0 +1,131 @@
+@model AccountingSystem.Web.Models.JournalEntryViewModel
+@{
+    ViewBag.Title = "New Journal Entry";
+}
+
+<h2>New Journal Entry</h2>
+
+@using (Html.BeginForm("Create", "Journal", FormMethod.Post, new { id = "journalForm", autocomplete = "off" }))
+{
+    @Html.AntiForgeryToken()
+
+    @* Model-level error, e.g. an unbalanced entry detected on the server. *@
+    @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+
+    <div class="card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-3">
+                @Html.LabelFor(m => m.VoucherNumber, new { @class = "form-label" })
+                @Html.TextBoxFor(m => m.VoucherNumber, new { @class = "form-control", placeholder = "auto-generated" })
+                <div class="form-text">Leave blank to allocate the next number.</div>
+            </div>
+            <div class="col-md-3">
+                @Html.LabelFor(m => m.TransactionDate, new { @class = "form-label" })
+                @Html.TextBoxFor(m => m.TransactionDate, "{0:yyyy-MM-dd}",
+                    new { @class = "form-control", type = "date" })
+                @Html.ValidationMessageFor(m => m.TransactionDate, "", new { @class = "text-danger" })
+            </div>
+            <div class="col-md-3">
+                @Html.LabelFor(m => m.Reference, new { @class = "form-label" })
+                @Html.TextBoxFor(m => m.Reference, new { @class = "form-control" })
+            </div>
+            <div class="col-md-3">
+                @Html.LabelFor(m => m.Description, new { @class = "form-label" })
+                @Html.TextBoxFor(m => m.Description, new { @class = "form-control" })
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Lines</span>
+            <button type="button" id="addLine" class="btn btn-sm btn-outline-primary">Add line</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0" id="linesTable">
+                <thead>
+                    <tr>
+                        <th style="width:32%">Account</th>
+                        <th style="width:26%">Description</th>
+                        <th style="width:16%" class="text-end">Debit</th>
+                        <th style="width:16%" class="text-end">Credit</th>
+                        <th style="width:10%"></th>
+                    </tr>
+                </thead>
+                <tbody id="linesBody">
+                    @for (var i = 0; i < Model.Lines.Count; i++)
+                    {
+                        <tr class="journal-line">
+                            <td>
+                                <select name="Lines[@i].AccountId" class="form-select form-select-sm account-select">
+                                    <option value="">-- select account --</option>
+                                    @foreach (var account in Model.Accounts)
+                                    {
+                                        var selected = account.AccountId == Model.Lines[i].AccountId;
+                                        <option value="@account.AccountId" @(selected ? "selected" : "")>
+                                            @account.AccountCode - @account.AccountName
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input name="Lines[@i].Description" value="@Model.Lines[i].Description" class="form-control form-control-sm" /></td>
+                            <td><input name="Lines[@i].Debit" value="@Model.Lines[i].Debit" type="number" step="0.0001" min="0"
+                                       class="form-control form-control-sm text-end debit-input" /></td>
+                            <td><input name="Lines[@i].Credit" value="@Model.Lines[i].Credit" type="number" step="0.0001" min="0"
+                                       class="form-control form-control-sm text-end credit-input" /></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="Remove line">&times;</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end">Totals</th>
+                        <th class="text-end" id="totalDebit">0.0000</th>
+                        <th class="text-end" id="totalCredit">0.0000</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td colspan="5">
+                            <span id="balanceStatus" class="badge bg-secondary">Not balanced</span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save draft</button>
+        <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Cancel</a>
+    </div>
+}
+
+@* Template row cloned by the "Add line" button. The __INDEX__ token is replaced
+   with the next line number in JavaScript. *@
+<template id="lineTemplate">
+    <tr class="journal-line">
+        <td>
+            <select name="Lines[__INDEX__].AccountId" class="form-select form-select-sm account-select">
+                <option value="">-- select account --</option>
+                @foreach (var account in Model.Accounts)
+                {
+                    <option value="@account.AccountId">@account.AccountCode - @account.AccountName</option>
+                }
+            </select>
+        </td>
+        <td><input name="Lines[__INDEX__].Description" class="form-control form-control-sm" /></td>
+        <td><input name="Lines[__INDEX__].Debit" value="0" type="number" step="0.0001" min="0"
+                   class="form-control form-control-sm text-end debit-input" /></td>
+        <td><input name="Lines[__INDEX__].Credit" value="0" type="number" step="0.0001" min="0"
+                   class="form-control form-control-sm text-end credit-input" /></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="Remove line">&times;</button>
+        </td>
+    </tr>
+</template>
+
+@section scripts {
+    <script src="@Url.Content("~/Scripts/journal-entry.js")"></script>
+}
