@@ -497,7 +497,7 @@ HEAD = """<!DOCTYPE html>
 <li><a class="dropdown-item" href="/reports/income-statement.html">Income Statement</a></li>
 <li><a class="dropdown-item" href="/reports/balance-sheet.html">Balance Sheet</a></li>
 <li><a class="dropdown-item" href="/reports/general-ledger.html">General Ledger</a></li>
-<li><a class="dropdown-item" href="/reports/audit-trail.html">Audit Trail</a></li>
+{auditnav}
 </ul></li></ul>
 <div class="dropdown">
 <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -532,9 +532,12 @@ def shell(title, body, active="", role=None, extra=""):
     roleitems = "".join(
         '<li><a class="dropdown-item%s" href="/switch-role?role=%s">%s</a></li>'
         % (" active" if r == role else "", r, r) for r in ROLES)
+    auditnav = ('<li><a class="dropdown-item" href="/reports/audit-trail.html">Audit Trail</a></li>'
+                if has_permission(role, "ViewAuditTrail") else "")
     html = HEAD.format(title=title,
                        ja=" active" if active == "journal" else "",
                        ra=" active" if active == "reports" else "",
+                       auditnav=auditnav,
                        user="CONTOSO\\j.smith", role=role, roleitems=roleitems)
     return html + body + extra + FOOT
 
