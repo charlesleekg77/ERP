@@ -1,0 +1,39 @@
+/* site.css - minimal application styling layered over Bootstrap 5. */
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* Financial figures are easier to scan right-aligned and tabular. */
+.text-end,
+.table td.text-end,
+.table th.text-end {
+    font-variant-numeric: tabular-nums;
+}
+
+#linesTable .form-control-sm,
+#linesTable .form-select-sm {
+    min-width: 6rem;
+}
+
+#balanceStatus {
+    font-size: 0.85rem;
+}
+
+table.dataTable td,
+table.dataTable th {
+    vertical-align: middle;
+}
+
+@media print {
+    .navbar,
+    footer,
+    form,
+    .btn {
+        display: none !important;
+    }
+    main {
+        padding: 0;
+    }
+}
