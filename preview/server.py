@@ -114,6 +114,47 @@ JOURNALS = []
 _SEQ = {"JV": 0, "REV": 0}
 _next_id = 1
 
+# Append-only audit trail (mirrors sec.AuditLog). Rows are never updated or
+# deleted; tamper attempts are refused the same way trg_AuditLog_Immutable does.
+AUDIT = []
+_next_audit_id = 1
+AUDIT_TAMPER_MESSAGE = "The audit log is append-only and cannot be modified or deleted."
+
+
+def _snapshot(j):
+    """JSON scalar snapshot of a journal header, as the audit triggers store."""
+    return json.dumps({
+        "JournalId": j["id"], "VoucherNumber": j["voucher"],
+        "TransactionDate": j["date"].isoformat(), "Status": STATUS_NAME[j["status"]],
+        "TotalDebit": sum(l["debit"] for l in j["lines"]),
+        "TotalCredit": sum(l["credit"] for l in j["lines"]),
+    })
+
+
+def _audit(schema, table, record_id, action, old, new, user):
+    global _next_audit_id
+    row = {
+        "id": _next_audit_id,
+        "schema": schema,
+        "table": table,
+        "recordId": str(record_id),
+        "action": action,
+        "oldValues": old,
+        "newValues": new,
+        "userId": user,
+        "userName": user,
+        "ipAddress": "127.0.0.1",
+        "occurredAt": datetime.now(),
+    }
+    _next_audit_id += 1
+    AUDIT.append(row)
+    return row
+
+
+def audit_tamper(audit_id):
+    """Attempt to modify/delete an audit row; always refused (append-only)."""
+    raise DomainError(AUDIT_TAMPER_MESSAGE)
+
 
 def _add_journal(voucher, txn_date, reference, description, status, lines,
                  created_by="system", posted_by=None, void_reason=None):
@@ -186,6 +227,10 @@ def seed():
                  created_by="a.clerk")
     _SEQ["JV"] = 5
 
+    # The database triggers would have captured every seeded row as an INSERT.
+    for j in JOURNALS:
+        _audit("gl", "JournalHeader", j["id"], "INSERT", None, _snapshot(j), j["createdBy"])
+
 
 seed()
 
@@ -236,6 +281,8 @@ def create_draft(payload, user):
                        "credit": money(l["credit"]), "description": l.get("description", "")}
                       for l in lines],
                      created_by=user)
+    # Trigger equivalent: gl.trg_JournalHeader_Audit on INSERT.
+    _audit("gl", "JournalHeader", j["id"], "INSERT", None, _snapshot(j), user)
     return j
 
 
@@ -244,7 +291,9 @@ def approve(jid, user):
     if j["status"] != 0:
         raise DomainError("Only a draft entry can be approved. This entry is %s."
                           % STATUS_NAME[j["status"]])
+    old = _snapshot(j)
     j["status"] = 1
+    _audit("gl", "JournalHeader", j["id"], "UPDATE", old, _snapshot(j), user)
     return j
 
 
@@ -253,9 +302,11 @@ def post(jid, user):
     if j["status"] in (2, 3):
         raise DomainError("Entry %s has already been posted or voided." % j["voucher"])
     validate_lines(j["lines"])
+    old = _snapshot(j)
     j["status"] = 2
     j["postedBy"] = user
     j["postedAt"] = datetime.now()
+    _audit("gl", "JournalHeader", j["id"], "UPDATE", old, _snapshot(j), user)
     return j
 
 
@@ -266,10 +317,12 @@ def void(jid, user, reason):
                           % STATUS_NAME[j["status"]])
     if not reason or not reason.strip():
         raise DomainError("A reason is required to void an entry.")
+    old = _snapshot(j)
     j["status"] = 3
     j["voidedBy"] = user
     j["voidedAt"] = datetime.now()
     j["voidReason"] = reason
+    _audit("gl", "JournalHeader", j["id"], "UPDATE", old, _snapshot(j), user)
     # Generate the reversing entry: debit/credit swapped, posted immediately.
     rev = _add_journal(next_number("REV"), j["date"], j["voucher"],
                        "Reversal of %s: %s" % (j["voucher"], reason), 2,
@@ -277,6 +330,7 @@ def void(jid, user, reason):
                          "credit": l["debit"], "description": "Reversal: " + l["description"]}
                         for l in j["lines"]],
                        created_by=user, posted_by=user)
+    _audit("gl", "JournalHeader", rev["id"], "INSERT", None, _snapshot(rev), user)
     return j, rev
 
 
@@ -443,6 +497,7 @@ HEAD = """<!DOCTYPE html>
 <li><a class="dropdown-item" href="/reports/income-statement.html">Income Statement</a></li>
 <li><a class="dropdown-item" href="/reports/balance-sheet.html">Balance Sheet</a></li>
 <li><a class="dropdown-item" href="/reports/general-ledger.html">General Ledger</a></li>
+<li><a class="dropdown-item" href="/reports/audit-trail.html">Audit Trail</a></li>
 </ul></li></ul>
 <div class="dropdown">
 <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -631,6 +686,14 @@ def render_details(jid, role=None):
 
 
 def render_reports_index(role=None):
+    # The audit trail card is only shown to roles that may view it.
+    audit_card = ""
+    if has_permission(role, "ViewAuditTrail"):
+        audit_card = ('<div class="col-md-6 col-lg-3"><div class="card h-100"><div class="card-body">'
+                      '<h5 class="card-title">Audit Trail</h5><p class="card-text small">Append-only log of '
+                      'every change to a financial record.</p>'
+                      '<a class="btn btn-primary btn-sm" href="/reports/audit-trail.html">Open</a>'
+                      '</div></div></div>')
     body = """
 <h2>Financial Reports</h2><div class="row g-4">
 <div class="col-md-6 col-lg-3"><div class="card h-100"><div class="card-body">
@@ -645,7 +708,8 @@ def render_reports_index(role=None):
 <div class="col-md-6 col-lg-3"><div class="card h-100"><div class="card-body">
 <h5 class="card-title">General Ledger</h5><p class="card-text small">Account movements with a running balance.</p>
 <a class="btn btn-primary btn-sm" href="/reports/general-ledger.html">Open</a></div></div></div>
-</div>"""
+%s
+</div>""" % audit_card
     return shell("Reports", body, active="reports", role=role)
 
 
@@ -809,6 +873,72 @@ def render_general_ledger(qs, role=None):
     return shell("General Ledger", body, active="reports", role=role)
 
 
+def render_audit(qs, role=None):
+    table = qs.get("table", [""])[0]
+    action = qs.get("action", [""])[0]
+    search = (qs.get("search", [""])[0] or "").strip().lower()
+    rows = list(AUDIT)
+    if table:
+        rows = [r for r in rows if r["table"] == table]
+    if action:
+        rows = [r for r in rows if r["action"] == action]
+    if search:
+        rows = [r for r in rows
+                if search in r["recordId"].lower()
+                or search in r["userId"].lower()
+                or search in (r["newValues"] or "").lower()
+                or search in (r["oldValues"] or "").lower()]
+    rows.sort(key=lambda r: r["id"], reverse=True)
+
+    def badge(a):
+        cls = {"INSERT": "success", "UPDATE": "primary", "DELETE": "danger"}.get(a, "secondary")
+        return '<span class="badge text-bg-%s">%s</span>' % (cls, a)
+
+    def snapshot_cell(v):
+        if not v:
+            return "<span class='text-muted'>—</span>"
+        return ("<details><summary class='small text-primary'>view</summary>"
+                "<code class='small'>%s</code></details>" % esc(v))
+
+    body_rows = "".join(
+        "<tr><td>%d</td><td><span class='text-muted'>%s.</span>%s</td><td>%s</td><td>%s</td>"
+        "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
+        "<td>%s</td></tr>" % (
+            r["id"], esc(r["schema"]), esc(r["table"]), esc(r["recordId"]), badge(r["action"]),
+            r["occurredAt"].strftime("%Y-%m-%d %H:%M:%S"), esc(r["userId"]),
+            snapshot_cell(r["oldValues"]), snapshot_cell(r["newValues"]), esc(r["ipAddress"]))
+        for r in rows)
+
+    tables = sorted({r["table"] for r in AUDIT})
+    top = "\n".join('<option value="%s"%s>%s</option>' % (esc(t), " selected" if t == table else "", esc(t))
+                    for t in tables)
+    acts = "\n".join('<option value="%s"%s>%s</option>' % (a, " selected" if a == action else "", a)
+                     for a in ("INSERT", "UPDATE", "DELETE"))
+    body = """
+<h2>Audit Trail</h2>
+<p class="text-muted">Append-only. Every change to a financial record is captured with its
+before/after image. Rows cannot be updated or deleted.</p>
+<form method="get" class="row g-3 align-items-end mb-3">
+<div class="col-auto"><label class="form-label">Table</label>
+<select name="table" class="form-select"><option value="">All tables</option>%s</select></div>
+<div class="col-auto"><label class="form-label">Action</label>
+<select name="action" class="form-select"><option value="">All actions</option>%s</select></div>
+<div class="col-auto"><label class="form-label">Search</label>
+<input name="search" class="form-control" value="%s" placeholder="record, user or values" /></div>
+<div class="col-auto"><button class="btn btn-primary">Filter</button>
+<button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+<button type="button" class="btn btn-outline-danger" id="auditTamper">Try to modify a row</button></div></form>
+<div id="tamperResult"></div>
+<div class="alert alert-secondary small mb-3">%d audit row(s). The trail is immutable:
+an UPDATE or DELETE against <code>sec.AuditLog</code> is refused by
+<code>sec.trg_AuditLog_Immutable</code>.</div>
+<table id="auditTable" class="table table-sm table-striped" style="width:100%%">
+<thead><tr><th>#</th><th>Table</th><th>Record</th><th>Action</th><th>When (UTC)</th><th>User</th>
+<th>Old values</th><th>New values</th><th>IP</th></tr></thead>
+<tbody>%s</tbody></table>""" % (top, acts, esc(search), len(rows), body_rows)
+    return shell("Audit Trail", body, active="reports", role=role)
+
+
 # ---------------------------------------------------------------------------
 # HTTP
 # ---------------------------------------------------------------------------
@@ -870,6 +1000,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/reports/income-statement.html": ("ViewLedger", lambda: render_income_statement(qs, role)),
                 "/reports/balance-sheet.html": ("ViewLedger", lambda: render_balance_sheet(qs, role)),
                 "/reports/general-ledger.html": ("ViewLedger", lambda: render_general_ledger(qs, role)),
+                "/reports/audit-trail.html": ("ViewAuditTrail", lambda: render_audit(qs, role)),
             }
 
             if path in ("/", "/index.html"):
@@ -911,6 +1042,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/journal/approve": "ApproveJournal",
             "/api/journal/post": "PostJournal",
             "/api/journal/void": "VoidJournal",
+            "/api/audit/tamper": "ViewAuditTrail",
         }
         try:
             if u.path in required:
@@ -932,6 +1064,12 @@ class Handler(BaseHTTPRequestHandler):
                     j, rev = void(payload.get("id"), user, payload.get("reason"))
                     return self._json({"success": True,
                                        "message": "Journal entry voided and reversed by %s." % rev["voucher"]})
+                if u.path == "/api/audit/tamper":
+                    # Demonstrates append-only enforcement: the write is always refused.
+                    try:
+                        audit_tamper(payload.get("id"))
+                    except DomainError as ex:
+                        return self._json({"success": False, "message": str(ex)}, 400)
             self._json({"success": False, "message": "Unknown endpoint."}, 404)
         except DomainError as ex:
             self._json({"success": False, "message": str(ex)}, 400)

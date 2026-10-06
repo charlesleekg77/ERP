@@ -222,5 +222,25 @@
     $(function () {
         initJournalIndex();
         initJournalCreate();
+        // Bound with jQuery rather than an inline onclick, matching the rest of
+        // the client code (and avoiding any inline-handler CSP issues).
+        jQuery('#auditTamper').on('click', tryTamper);
     });
 })(jQuery);
+
+// Demonstrates that the audit trail is append-only: the server always refuses.
+function tryTamper() {
+    jQuery.ajax({
+        url: '/api/audit/tamper',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ id: 1 })
+    }).fail(function (xhr) {
+        var message = (xhr.responseJSON && xhr.responseJSON.message)
+            || 'The audit log is append-only and cannot be modified or deleted.';
+        jQuery('#tamperResult').html(
+            '<div class="alert alert-danger py-2">Refused: ' + message + '</div>');
+    }).done(function () {
+        jQuery('#tamperResult').html('<div class="alert alert-warning py-2">Unexpected: the write was allowed.</div>');
+    });
+}

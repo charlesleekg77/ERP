@@ -14,19 +14,23 @@ Server Express.
   (which generates a reversing entry, as the real system does).
 - **Reports computed from the live ledger**: trial balance, income statement,
   balance sheet and general ledger detail, with a date range.
+- **Audit trail**: an append-only log (`sec.AuditLog` in the real schema).
+  Every create, approve, post and void writes a row with the before/after
+  image, the user and the timestamp. The trail cannot be updated or deleted;
+  the page has a "Try to modify a row" button that shows the refusal.
 - **RBAC**: the same role/permission matrix as
   `Services/Security/AuthorizationService.cs`. Switch role from the navbar to see
   a permission denied (HTTP 403) page, or an action refused.
 
 Role matrix (mirrors the application):
 
-| Role | View | Create draft | Approve | Post | Void |
-|---|---|---|---|---|---|
-| Administrator | yes | yes | yes | yes | yes |
-| Accountant | yes | yes | no | yes | no |
-| Approver | yes | no | yes | no | no |
-| Clerk | yes | yes | no | no | no |
-| Auditor | yes | no | no | no | no |
+| Role | View | Create draft | Approve | Post | Void | Audit trail |
+|---|---|---|---|---|---|---|
+| Administrator | yes | yes | yes | yes | yes | yes |
+| Accountant | yes | yes | no | yes | no | yes |
+| Approver | yes | no | yes | no | no | no |
+| Clerk | yes | yes | no | no | no | no |
+| Auditor | yes | no | no | no | no | yes |
 
 ## Run it
 
